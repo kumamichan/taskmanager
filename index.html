@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>タスク管理 — CEO</title>
+<meta name="theme-color" content="#F5A823">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="タスク管理">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg:      #0A1628;
+    --bg2:     #0F1E38;
+    --surface: #152340;
+    --border:  rgba(245,170,50,0.18);
+    --text:    #F5D080;
+    --sub:     #C4A055;
+    --hint:    #7A6235;
+    --accent:  #F5A823;
+    --accent2: #E08C10;
+    --green:   #3DD68C;
+    --green-bg:#0D3325;
+    --red:     #FF6B6B;
+    --red-bg:  #3A1515;
+    --orange:  #F5A823;
+    --orange-bg:#2E1F06;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: "Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* グリッドノイズ */
+  body::before {
+    content:"";
+    position:fixed;inset:0;
+    background-image:
+      linear-gradient(rgba(245,168,35,0.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(245,168,35,0.03) 1px,transparent 1px);
+    background-size:48px 48px;
+    pointer-events:none;z-index:0;
+  }
+
+  /* ヘッダー */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+    backdrop-filter: blur(12px);
+  }
+  .header-title {
+    font-size: 17px; font-weight: 800; color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .header-sub { font-size: 12px; color: var(--hint); }
+  .notify-time {
+    font-size: 12px; font-weight: 700;
+    background: var(--orange-bg); color: var(--accent);
+    border: 1px solid rgba(245,168,35,0.3);
+    padding: 4px 14px; border-radius: 20px;
+  }
+
+  /* コンテナ */
+  .container { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; position:relative;z-index:1; }
+
+  /* 追加フォーム */
+  .add-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .add-card h2 { font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+
+  .form-row { display: flex; flex-direction: column; gap: 12px; }
+  .form-group label {
+    font-size: 11px; font-weight: 700; color: var(--sub);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    display: block; margin-bottom: 5px;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245,168,35,0.15);
+  }
+  .form-group select option { background: var(--bg2); color: var(--text); }
+  .form-group textarea { resize: vertical; min-height: 72px; }
+
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+
+  .btn-add {
+    width: 100%; padding: 13px;
+    background: var(--accent); color: #0A1628;
+    border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 800;
+    cursor: pointer; font-family: inherit;
+    margin-top: 4px; letter-spacing: 0.04em;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-add:hover { background: #FFB833; }
+  .btn-add:active { transform: scale(0.98); }
+  .btn-add:disabled { background: var(--hint); cursor: not-allowed; }
+
+  /* トースト */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface); color: var(--accent);
+    border: 1px solid var(--border);
+    padding: 12px 24px; border-radius: 30px;
+    font-size: 14px; font-weight: 700;
+    transition: transform 0.3s;
+    z-index: 100; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+  .toast.error   { background: var(--red-bg);   color: var(--red);   border-color: var(--red); }
+
+  /* タスク一覧 */
+  .section-title {
+    font-size: 11px; font-weight: 700; color: var(--sub);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .task-count {
+    background: var(--bg2); color: var(--hint);
+    border: 1px solid var(--border);
+    font-size: 11px; padding: 2px 10px; border-radius: 10px;
+  }
+
+  .task-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+
+  .task-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex; align-items: flex-start; gap: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .task-item:hover { box-shadow: 0 4px 20px rgba(245,168,35,0.1); border-color: rgba(245,168,35,0.4); }
+
+  .task-check {
+    width: 20px; height: 20px;
+    border: 2px solid var(--hint);
+    border-radius: 6px; flex-shrink: 0;
+    cursor: pointer; margin-top: 2px;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+  }
+  .task-check.done { background: var(--green); border-color: var(--green); color: #0A1628; font-size: 12px; }
+  .task-check.done::after { content: "✓"; font-weight: 900; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .task-name.done { text-decoration: line-through; color: var(--hint); }
+  .task-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 5px; }
+  .tag-deadline         { background: var(--orange-bg); color: var(--orange); border: 1px solid rgba(245,168,35,0.3); }
+  .tag-deadline.today   { background: var(--red-bg);    color: var(--red);    border: 1px solid rgba(255,107,107,0.3); }
+  .tag-deadline.tomorrow{ background: var(--orange-bg); color: var(--orange); }
+  .tag-project          { background: rgba(245,168,35,0.1); color: var(--accent); border: 1px solid rgba(245,168,35,0.2); }
+  .tag-status-todo      { background: rgba(255,255,255,0.05); color: var(--hint); }
+  .tag-status-doing     { background: rgba(245,168,35,0.12); color: var(--accent); }
+  .tag-status-done      { background: var(--green-bg); color: var(--green); }
+  .tag-status-pending   { background: rgba(150,150,255,0.1); color: #A0A0FF; }
+  .tag-status-waiting   { background: rgba(255,200,50,0.1);  color: #FFD070; }
+
+  .task-delete {
+    font-size: 15px; color: var(--hint); cursor: pointer;
+    flex-shrink: 0; padding: 2px 6px; border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    background: none; border: none;
+  }
+  .task-delete:hover { color: var(--red); background: var(--red-bg); }
+
+  /* 空状態 */
+  .empty { text-align: center; padding: 48px 24px; color: var(--hint); font-size: 14px; }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+  /* ローディング */
+  .loading { text-align: center; padding: 32px; color: var(--hint); }
+  .spinner {
+    display: inline-block; width: 24px; height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin-bottom: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 480px) {
+    .form-row-2 { grid-template-columns: 1fr; }
+    .form-row-3 { grid-template-columns: 1fr 1fr; }
+    header { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-title">📋 タスク管理</div>
+    <div class="header-sub">Notion連携 · LINE通知 毎朝8:50</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span class="notify-time">🔔 8:50 LINE通知</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- タスク追加フォーム -->
+  <div class="add-card">
+    <h2>＋ タスクを追加</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>タスク名 *</label>
+        <input type="text" id="taskName" placeholder="例：既存顧客3名に声集めメッセージを送る" maxlength="100">
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>期限（日付）</label>
+          <input type="date" id="taskDeadline">
+        </div>
+        <div class="form-group">
+          <label>時</label>
+          <select id="taskHour">
+            <option value="">--</option>
+            <option>6</option><option>7</option><option>8</option><option>9</option>
+            <option>10</option><option>11</option><option>12</option><option>13</option>
+            <option>14</option><option>15</option><option>16</option><option>17</option>
+            <option>18</option><option>19</option><option>20</option><option>21</option>
+            <option>22</option><option>23</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>分</label>
+          <select id="taskMin">
+            <option value="">--</option>
+            <option>00</option><option>15</option><option>30</option><option>45</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>プロジェクト</label>
+          <select id="taskProject">
+            <option value="">選択してください</option>
+            <option value="CyCal">📅 CyCal</option>
+            <option value="UnionCard">💎 UnionCard</option>
+            <option value="ひつじのフェルメー">🐑 ひつじのフェルメー</option>
+            <option value="CLAUDE">🤖 CLAUDE</option>
+            <option value="DULCE">✨ DULCE</option>
+            <option value="求人">👥 求人</option>
+            <option value="１１万円">💰 １１万円</option>
+            <option value="プライベート">🏠 プライベート</option>
+            <option value="その他">📌 その他</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>ステータス</label>
+        <select id="taskStatus">
+          <option value="進行中">🔵 進行中</option>
+          <option value="ペンディング">⏸ ペンディング</option>
+          <option value="レスポンス待ち">💬 レスポンス待ち</option>
+          <option value="完了">✅ 完了</option>
+        </select>
+      </div>
+
+      <button class="btn-add" id="addBtn" onclick="addTask()">Notionに追加する</button>
+    </div>
+  </div>
+
+  <!-- 今日・明日のタスク -->
+  <div class="section-title">
+    🔴 今日・明日の期限
+    <span class="task-count" id="urgentCount">-</span>
+  </div>
+  <div class="task-list" id="urgentList">
+    <div class="loading"><div class="spinner"></div><br>読み込み中...</div>
+  </div>
+
+  <!-- 全タスク -->
+  <div class="section-title">
+    📋 すべてのタスク（未完了）
+    <span class="task-count" id="allCount">-</span>
+  </div>
+  <div class="task-list" id="allList">
+    <div class="loading"><div class="spinner"></div><br>読み込み中...</div>
+  </div>
+
+</div>
+
+<!-- 設定モーダル -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>⚙️ 設定</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Notion APIトークン</label>
+        <input type="password" id="cfgToken" placeholder="ntn_...">
+      </div>
+      <div class="form-group">
+        <label>NotionデータベースID</label>
+        <input type="text" id="cfgDbId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeSettings()">キャンセル</button>
+      <button class="btn-primary" onclick="saveSettings()">保存して再読み込み</button>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// GAS Web App エンドポイント
+// ============================================================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwlco4ZTjY6_wWsIx6Inns48Wa8IRFncgfmkZ50kGgXXhSCQ1vStXWKiXeMUTc-nSpm/exec';
+
+// ============================================================
+// GAS API 共通リクエスト
+// ============================================================
+async function gasGet() {
+  const res = await fetch(GAS_URL, { method: 'GET' });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'GAS error');
+  return data;
+}
+
+async function gasPost(body) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'GAS error');
+  return data;
+}
+
+// タスク一覧取得
+async function fetchTasks() {
+  const data = await gasGet();
+  return data.tasks;
+}
+
+// タスク追加
+async function addTask() {
+  const name = document.getElementById('taskName').value.trim();
+  if (!name) { showToast('タスク名を入力してください', 'error'); return; }
+
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true;
+  btn.textContent = '追加中...';
+
+  const date    = document.getElementById('taskDeadline').value;
+  const hour    = document.getElementById('taskHour').value;
+  const min     = document.getElementById('taskMin').value;
+  const deadline = date ? (hour && min ? `${date}T${hour.padStart(2,'0')}:${min}:00` : date) : '';
+  const project  = document.getElementById('taskProject').value;
+  const status   = document.getElementById('taskStatus').value;
+
+  const props = {
+    '名前': { title: [{ text: { content: name } }] },
+    'ステータス': { select: { name: status } }
+  };
+  if (deadline) props['期限'] = { date: { start: deadline } };
+  if (project)  props['プロジェクト'] = { select: { name: project } };
+
+  try {
+    await gasPost({ action: 'add', name, deadline, project, status });
+
+    document.getElementById('taskName').value = '';
+    document.getElementById('taskDeadline').value = new Date().toISOString().slice(0,10);
+    document.getElementById('taskHour').value = '';
+    document.getElementById('taskMin').value = '';
+    document.getElementById('taskProject').value = '';
+    document.getElementById('taskStatus').value = '進行中';
+
+    showToast('Notionに追加しました！', 'success');
+    loadTasks();
+  } catch(e) {
+    showToast('エラー: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Notionに追加する';
+  }
+}
+
+// タスク表示
+async function loadTasks() {
+  try {
+    const tasks = await fetchTasks();
+    const today = new Date().toISOString().slice(0,10);
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0,10);
+
+    const urgent = tasks.filter(t => {
+      const d = getDeadline(t);
+      return d && (d <= tomorrow);
+    });
+    const all = tasks;
+
+    document.getElementById('urgentCount').textContent = urgent.length + '件';
+    document.getElementById('allCount').textContent = all.length + '件';
+
+    renderList('urgentList', urgent, today, tomorrow);
+    renderList('allList', all, today, tomorrow);
+  } catch(e) {
+    document.getElementById('urgentList').innerHTML = '<div class="empty"><div>⚠️</div>読み込み失敗。設定を確認してください。</div>';
+    document.getElementById('allList').innerHTML = '';
+  }
+}
+
+function renderList(id, tasks, today, tomorrow) {
+  const el = document.getElementById(id);
+  if (!tasks.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div>タスクはありません</div>';
+    return;
+  }
+  el.innerHTML = tasks.map(t => renderTask(t, today, tomorrow)).join('');
+}
+
+function renderTask(t, today, tomorrow) {
+  const name     = getTitle(t);
+  const deadline = getDeadline(t);
+  const project  = getProp(t, 'プロジェクト', 'select')?.name || '';
+  const status   = getProp(t, 'ステータス', 'select')?.name || '進行中';
+
+  // 期限の日付部分・時刻部分を分離
+  const dlDate = deadline ? deadline.slice(0,10) : '';
+  const dlTime = deadline && deadline.length > 10
+    ? deadline.slice(11,16)
+    : '';
+
+  let dlClass = 'tag-deadline';
+  let dlLabel = dlDate ? dlDate.replace(/-/g,'/') : '';
+  if (dlTime) dlLabel += ' ' + dlTime;
+  if (dlDate === today)    { dlClass += ' today';    dlLabel = '🔴 今日' + (dlTime ? ' ' + dlTime : ''); }
+  if (dlDate === tomorrow) { dlClass += ' tomorrow'; dlLabel = '🟡 明日' + (dlTime ? ' ' + dlTime : ''); }
+
+  const statusClass =
+    status === '完了'         ? 'tag-status-done' :
+    status === '進行中'        ? 'tag-status-doing' :
+    status === 'ペンディング'   ? 'tag-status-pending' :
+    status === 'レスポンス待ち' ? 'tag-status-waiting' :
+    'tag-status-todo';
+
+  return `
+    <div class="task-item" id="task-${t.id}">
+      <div class="task-check" onclick="toggleDone('${t.id}', this)"></div>
+      <div class="task-body">
+        <div class="task-name">${name}</div>
+        <div class="task-meta">
+          ${deadline ? `<span class="tag ${dlClass}">${dlLabel}</span>` : ''}
+          ${project ? `<span class="tag tag-project">${project}</span>` : ''}
+          <span class="tag ${statusClass}">${status}</span>
+        </div>
+      </div>
+      <button class="task-delete" onclick="deleteTask('${t.id}')" title="削除">✕</button>
+    </div>
+  `;
+}
+
+async function toggleDone(id, el) {
+  el.classList.toggle('done');
+  const isDone = el.classList.contains('done');
+  const nameEl = el.nextElementSibling?.querySelector('.task-name');
+  if (nameEl) nameEl.classList.toggle('done', isDone);
+  try {
+    await gasPost({ action: 'update_status', pageId: id, status: isDone ? '完了' : '未着手' });
+    if (isDone) { showToast('完了しました！', 'success'); setTimeout(loadTasks, 800); }
+  } catch(e) { showToast('更新失敗', 'error'); }
+}
+
+async function deleteTask(id) {
+  if (!confirm('このタスクをアーカイブしますか？')) return;
+  try {
+    await gasPost({ action: 'delete', pageId: id });
+    document.getElementById('task-' + id)?.remove();
+    showToast('削除しました', 'success');
+  } catch(e) { showToast('削除失敗', 'error'); }
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function getTitle(t) {
+  const p = t.properties['名前'] || t.properties['タスク名'] || t.properties['Name'];
+  return p?.title?.map(x => x.plain_text).join('') || '(無題)';
+}
+function getDeadline(t) {
+  const p = t.properties['期限'] || t.properties['Deadline'] || t.properties['Due'];
+  return p?.date?.start || '';
+}
+function getProp(t, key, type) { return t.properties[key]?.[type]; }
+
+function showToast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + type;
+  setTimeout(() => el.className = 'toast', 2800);
+}
+
+function openSettings() {
+  document.getElementById('cfgToken').value = getToken();
+  document.getElementById('cfgDbId').value = getDbId();
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+function saveSettings() {
+  const t = document.getElementById('cfgToken').value.trim();
+  const d = document.getElementById('cfgDbId').value.trim();
+  if (t) localStorage.setItem('notion_token', t);
+  if (d) localStorage.setItem('notion_db_id', d);
+  closeSettings();
+  loadTasks();
+  showToast('設定を保存しました', 'success');
+}
+
+// 今日の日付をデフォルトに
+document.getElementById('taskDeadline').value = new Date().toISOString().slice(0,10);
+
+// Enterキーで送信
+document.getElementById('taskName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+
+// 初期ロード
+loadTasks();
+
+// Service Worker 登録（PWA）
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
