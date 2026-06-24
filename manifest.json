@@ -2,7 +2,7 @@
   "name": "タスク管理 — CEO",
   "short_name": "タスク管理",
   "description": "Notion連携タスク管理アプリ。毎朝8:50にLINEで期限通知。",
-  "start_url": "/",
+  "start_url": "/taskmanager/",
   "display": "standalone",
   "background_color": "#0A1628",
   "theme_color": "#F5A823",

@@ -1,5 +1,5 @@
 const CACHE = 'task-manager-v1';
-const ASSETS = ['/', '/index.html'];
+const ASSETS = ['/taskmanager/', '/taskmanager/index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
