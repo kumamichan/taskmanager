@@ -116,7 +116,9 @@
   .form-group textarea { resize: vertical; min-height: 72px; }
 
   .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-2 > * { min-width: 0; overflow: hidden; }
   .form-row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+  .form-row-3 > * { min-width: 0; overflow: hidden; }
 
   .btn-add {
     width: 100%; padding: 13px;
@@ -223,10 +225,18 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  @media (max-width: 480px) {
+  @media (max-width: 600px) {
     .form-row-2 { grid-template-columns: 1fr; }
     .form-row-3 { grid-template-columns: 1fr 1fr; }
     header { padding: 12px 16px; }
+    .form-group input[type="date"],
+    .form-group input[type="time"] {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .container { padding: 16px 12px 80px; }
+    .add-card { padding: 16px; }
   }
 </style>
 </head>
