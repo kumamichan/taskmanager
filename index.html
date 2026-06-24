@@ -344,7 +344,7 @@
 // ============================================================
 // GAS Web App エンドポイント
 // ============================================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwUN4aLyhYgLl_zwqQ_9QDQX6sX4-CVy725c-IpXsG6FdJEjUe_JKtofSCQ2mUsVzvY/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyO_0gNSgYQkKN2ItqZoN0GX_NlHO9L4bKnJ9Lp14IxlpALNN4wt2SGykN1EcuW3wGQ/exec';
 
 // ============================================================
 // GAS API 共通リクエスト
@@ -469,6 +469,8 @@ function renderTask(t, today, tomorrow) {
   if (dlDate === today)    { dlClass += ' today';    dlLabel = '🔴 今日' + (dlTime ? ' ' + dlTime : ''); }
   if (dlDate === tomorrow) { dlClass += ' tomorrow'; dlLabel = '🟡 明日' + (dlTime ? ' ' + dlTime : ''); }
 
+  const meetUrl  = t.meetUrl || '';
+
   const statusClass =
     status === '完了'         ? 'tag-status-done' :
     status === '進行中'        ? 'tag-status-doing' :
@@ -485,6 +487,7 @@ function renderTask(t, today, tomorrow) {
           ${deadline ? `<span class="tag ${dlClass}">${dlLabel}</span>` : ''}
           ${project ? `<span class="tag tag-project">${project}</span>` : ''}
           <span class="tag ${statusClass}">${status}</span>
+          ${meetUrl ? `<a href="${meetUrl}" target="_blank" style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:5px;background:rgba(0,200,100,0.12);color:#3DD68C;border:1px solid rgba(61,214,140,0.3);text-decoration:none;">📹 Meet</a>` : ''}
         </div>
       </div>
       <button class="task-delete" onclick="deleteTask('${t.id}')" title="削除">✕</button>
