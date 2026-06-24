@@ -253,28 +253,14 @@
         <input type="text" id="taskName" placeholder="例：既存顧客3名に声集めメッセージを送る" maxlength="100">
       </div>
 
-      <div class="form-row-3">
+      <div class="form-row-2">
         <div class="form-group">
           <label>期限（日付）</label>
           <input type="date" id="taskDeadline">
         </div>
         <div class="form-group">
-          <label>時</label>
-          <select id="taskHour">
-            <option value="">--</option>
-            <option>6</option><option>7</option><option>8</option><option>9</option>
-            <option>10</option><option>11</option><option>12</option><option>13</option>
-            <option>14</option><option>15</option><option>16</option><option>17</option>
-            <option>18</option><option>19</option><option>20</option><option>21</option>
-            <option>22</option><option>23</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>分</label>
-          <select id="taskMin">
-            <option value="">--</option>
-            <option>00</option><option>15</option><option>30</option><option>45</option>
-          </select>
+          <label>時刻（任意）</label>
+          <input type="time" id="taskTime" step="300">
         </div>
       </div>
 
@@ -399,9 +385,8 @@ async function addTask() {
   btn.textContent = '追加中...';
 
   const date    = document.getElementById('taskDeadline').value;
-  const hour    = document.getElementById('taskHour').value;
-  const min     = document.getElementById('taskMin').value;
-  const deadline = date ? (hour && min ? `${date}T${hour.padStart(2,'0')}:${min}:00` : date) : '';
+  const time    = document.getElementById('taskTime').value;
+  const deadline = date ? (time ? `${date}T${time}:00` : date) : '';
   const project  = document.getElementById('taskProject').value;
   const status   = document.getElementById('taskStatus').value;
 
@@ -417,8 +402,7 @@ async function addTask() {
 
     document.getElementById('taskName').value = '';
     document.getElementById('taskDeadline').value = new Date().toISOString().slice(0,10);
-    document.getElementById('taskHour').value = '';
-    document.getElementById('taskMin').value = '';
+    document.getElementById('taskTime').value = '';
     document.getElementById('taskProject').value = '';
     document.getElementById('taskStatus').value = '進行中';
 
