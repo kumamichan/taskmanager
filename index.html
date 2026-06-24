@@ -448,8 +448,9 @@ async function loadTasks() {
     renderList('urgentList', urgent, today, tomorrow);
     renderList('allList', all, today, tomorrow);
   } catch(e) {
-    document.getElementById('urgentList').innerHTML = '<div class="empty"><div>⚠️</div>読み込み失敗。設定を確認してください。</div>';
+    document.getElementById('urgentList').innerHTML = '<div class="empty"><div>⚠️</div>エラー: ' + e.message + '</div>';
     document.getElementById('allList').innerHTML = '';
+    console.error('loadTasks error:', e);
   }
 }
 
