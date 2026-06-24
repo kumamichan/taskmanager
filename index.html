@@ -342,6 +342,14 @@
         </div>
       </div>
 
+      <!-- Meet 作成トグル（時刻入力時のみ表示） -->
+      <div id="meetToggleWrap" style="display:none;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;">
+          <input type="checkbox" id="createMeet" style="width:18px;height:18px;accent-color:var(--green);cursor:pointer;">
+          <span style="font-size:13px;color:var(--sub);">📹 Google Meet リンクを作成する</span>
+        </label>
+      </div>
+
       <div class="form-row-2">
         <div class="form-group" style="grid-column:1/-1;">
           <label>プロジェクト</label>
@@ -436,7 +444,7 @@
 // ============================================================
 // GAS Web App エンドポイント
 // ============================================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxTveVwQjZgIsa2d3UmDPw348lgwGHtdN8fhQef8H6uweJFnt5HNfOjuoGvGpUPE-DF/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx1l1dx-jtbXaT-6Hevkrs3FrUS1v1eLQczvnCkNl0D9oCoayRTtTs2Hi8wTQW-jS2C/exec';
 
 // ============================================================
 // GAS API 共通リクエスト
@@ -476,11 +484,12 @@ async function addTask() {
   btn.disabled = true;
   btn.textContent = '追加中...';
 
-  const date    = document.getElementById('taskDeadline').value;
-  const time    = document.getElementById('taskTime').value;
-  const deadline = date ? (time ? `${date}T${time}:00` : date) : '';
-  const project  = document.getElementById('taskProject').value;
-  const status   = document.getElementById('taskStatus').value;
+  const date       = document.getElementById('taskDeadline').value;
+  const time       = document.getElementById('taskTime').value;
+  const createMeet = document.getElementById('createMeet').checked;
+  const deadline   = date ? (time ? `${date}T${time}:00` : date) : '';
+  const project    = document.getElementById('taskProject').value;
+  const status     = document.getElementById('taskStatus').value;
 
   const props = {
     '名前': { title: [{ text: { content: name } }] },
@@ -490,13 +499,15 @@ async function addTask() {
   if (project)  props['プロジェクト'] = { select: { name: project } };
 
   try {
-    const res = await gasPost({ action: 'add', name, deadline, project, status });
+    const res = await gasPost({ action: 'add', name, deadline, project, status, createMeet });
 
     document.getElementById('taskName').value = '';
     document.getElementById('taskDeadline').value = new Date().toISOString().slice(0,10);
     document.getElementById('taskTime').value = '';
     document.getElementById('taskProject').value = '';
     document.getElementById('taskStatus').value = '進行中';
+    document.getElementById('createMeet').checked = false;
+    document.getElementById('meetToggleWrap').style.display = 'none';
 
     const meetUrl = res?.result?.meetUrl || '';
     if (meetUrl) {
@@ -678,6 +689,13 @@ function saveSettings() {
 
 // 今日の日付をデフォルトに
 document.getElementById('taskDeadline').value = new Date().toISOString().slice(0,10);
+
+// 時刻入力時にMeetトグルを表示
+document.getElementById('taskTime').addEventListener('change', function() {
+  const wrap = document.getElementById('meetToggleWrap');
+  wrap.style.display = this.value ? 'block' : 'none';
+  if (!this.value) document.getElementById('createMeet').checked = false;
+});
 
 // Enterキーで送信
 document.getElementById('taskName').addEventListener('keydown', e => {
