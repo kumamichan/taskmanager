@@ -358,13 +358,16 @@
 // ============================================================
 // GAS Web App エンドポイント
 // ============================================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyDy5VXsenS7qVIvOEPdYhEzd6MX2RNikkvqE3NlZrTthttuAEIY0mX8ql7tCJJXQhs/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwUN4aLyhYgLl_zwqQ_9QDQX6sX4-CVy725c-IpXsG6FdJEjUe_JKtofSCQ2mUsVzvY/exec';
 
 // ============================================================
 // GAS API 共通リクエスト
 // ============================================================
 async function gasGet() {
-  const res = await fetch(GAS_URL, { method: 'GET' });
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'get_tasks' })
+  });
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'GAS error');
   return data;
