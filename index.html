@@ -440,8 +440,8 @@ async function loadTasks() {
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0,10);
 
     const urgent = tasks.filter(t => {
-      const d = getDeadline(t);
-      return d && (d <= tomorrow);
+      const d = t.deadline || '';
+      return d && (d.slice(0,10) <= tomorrow);
     });
     const all = tasks;
 
@@ -536,10 +536,15 @@ function getTitle(t) {
   return p?.title?.map(x => x.plain_text).join('') || '(無題)';
 }
 function getDeadline(t) {
+  if (t.deadline !== undefined) return t.deadline || '';
+  if (!t.properties) return '';
   const p = t.properties['期限'] || t.properties['Deadline'] || t.properties['Due'];
   return p?.date?.start || '';
 }
-function getProp(t, key, type) { return t.properties[key]?.[type]; }
+function getProp(t, key, type) {
+  if (!t.properties) return undefined;
+  return t.properties[key]?.[type];
+}
 
 function showToast(msg, type='') {
   const el = document.getElementById('toast');
