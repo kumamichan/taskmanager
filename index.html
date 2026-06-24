@@ -467,10 +467,11 @@ function renderList(id, tasks, today, tomorrow) {
 }
 
 function renderTask(t, today, tomorrow) {
-  const name     = getTitle(t);
-  const deadline = getDeadline(t);
-  const project  = getProp(t, 'プロジェクト', 'select')?.name || '';
-  const status   = getProp(t, 'ステータス', 'select')?.name || '進行中';
+  // GASが返すフラット形式に対応
+  const name     = t.name     || t.title || getTitle(t)    || '(無題)';
+  const deadline = t.deadline || getDeadline(t)             || '';
+  const project  = t.project  || getProp(t,'プロジェクト','select')?.name || '';
+  const status   = t.status   || getProp(t,'ステータス','select')?.name   || '進行中';
 
   // 期限の日付部分・時刻部分を分離
   const dlDate = deadline ? deadline.slice(0,10) : '';
