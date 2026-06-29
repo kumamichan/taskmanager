@@ -324,7 +324,16 @@
 
   <!-- タスク追加フォーム -->
   <div class="add-card">
-    <h2>＋ タスクを追加</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2 style="margin:0;">＋ タスクを追加</h2>
+      <button id="voiceBtn" onclick="startVoiceInput()" title="音声入力"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">
+        🎤
+      </button>
+    </div>
+    <div id="voiceStatus" style="display:none;font-size:12px;color:var(--green);margin-bottom:8px;text-align:center;animation:pulse 1s infinite;">
+      🔴 録音中... 話しかけてください
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>タスク名 *</label>
@@ -444,7 +453,7 @@
 // ============================================================
 // GAS Web App エンドポイント
 // ============================================================
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbz5j_GbSQ65ppLJRQ59zhZz8XLQHvl7xzXJ_b8dxjZsVBvYGgC-PmnbE3sw16opTCn2/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxqms4Yl9hV3RmEsNesxLoNVnp0btRDLJ5PVKAgBgqtwfJTM0NvZ4RqKuqZP4_oXav5/exec';
 
 // ============================================================
 // GAS API 共通リクエスト
@@ -701,6 +710,139 @@ document.getElementById('taskTime').addEventListener('change', function() {
 document.getElementById('taskName').addEventListener('keydown', e => {
   if (e.key === 'Enter') addTask();
 });
+
+// ============================================================
+// 音声入力
+// ============================================================
+let recognition = null;
+
+function startVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast('このブラウザは音声入力に非対応です', 'error');
+    return;
+  }
+
+  if (recognition) { recognition.stop(); return; }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ja-JP';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  const btn = document.getElementById('voiceBtn');
+  const status = document.getElementById('voiceStatus');
+  btn.style.background = 'var(--red-bg)';
+  btn.style.borderColor = 'var(--red)';
+  status.style.display = 'block';
+
+  recognition.onresult = function(e) {
+    const text = e.results[0][0].transcript;
+    console.log('音声認識結果:', text);
+    parseVoiceInput(text);
+    showToast('「' + text + '」を認識しました', 'success');
+  };
+
+  recognition.onend = function() {
+    recognition = null;
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    status.style.display = 'none';
+  };
+
+  recognition.onerror = function(e) {
+    recognition = null;
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    status.style.display = 'none';
+    showToast('音声認識エラー: ' + e.error, 'error');
+  };
+
+  recognition.start();
+}
+
+function parseVoiceInput(text) {
+  // タスク名の抽出（は/が/で区切り）
+  const namePatterns = [
+    /タスク(?:名)?(?:は|が)?(.+?)(?:を|で|の|、|,|(?:\d|明日|今日|来週|月曜|火曜|水曜|木曜|金曜|土曜|日曜))/,
+    /(.+?)(?:という|っていう)タスク/,
+  ];
+  for (const p of namePatterns) {
+    const m = text.match(p);
+    if (m) { document.getElementById('taskName').value = m[1].trim(); break; }
+  }
+  // タスク名がまだ空なら全文をタスク名の候補に
+  if (!document.getElementById('taskName').value) {
+    const cleaned = text
+      .replace(/プロジェクト(?:は|が)?[\w\s]+/g, '')
+      .replace(/\d+月\d+日/g, '')
+      .replace(/\d+時/g, '')
+      .replace(/までに|まで|ニーズ/g, '')
+      .trim();
+    if (cleaned) document.getElementById('taskName').value = cleaned;
+  }
+
+  // 日付の抽出
+  const today = new Date();
+  const dateMap = {
+    '今日': 0, '本日': 0, '明日': 1, '明後日': 2,
+    '月曜': getDayOffset(1), '火曜': getDayOffset(2),
+    '水曜': getDayOffset(3), '木曜': getDayOffset(4),
+    '金曜': getDayOffset(5), '土曜': getDayOffset(6), '日曜': getDayOffset(0)
+  };
+  for (const [word, offset] of Object.entries(dateMap)) {
+    if (text.includes(word)) {
+      const d = new Date(today); d.setDate(d.getDate() + offset);
+      document.getElementById('taskDeadline').value = d.toISOString().slice(0,10);
+      break;
+    }
+  }
+  // ○月○日
+  const dateMatch = text.match(/(\d+)月(\d+)日/);
+  if (dateMatch) {
+    const m = dateMatch[1].padStart(2,'0');
+    const d = dateMatch[2].padStart(2,'0');
+    const y = today.getFullYear();
+    document.getElementById('taskDeadline').value = `${y}-${m}-${d}`;
+  }
+
+  // 時刻の抽出
+  const timeMatch = text.match(/(\d+)時(?:(\d+)分)?/);
+  if (timeMatch) {
+    const h = timeMatch[1].padStart(2,'0');
+    const min = (timeMatch[2] || '00').padStart(2,'0');
+    document.getElementById('taskTime').value = `${h}:${min}`;
+    document.getElementById('meetToggleWrap').style.display = 'block';
+  }
+
+  // プロジェクトの抽出（音声での言い方も含むエイリアス）
+  const projectAliases = [
+    { value: 'CyCal',        aliases: ['CyCal','cycal','サイクル','サイカル','cycal','Cycal'] },
+    { value: 'UnionCard',    aliases: ['UnionCard','unioncard','ユニオンカード','ユニオン','ユニオンカード'] },
+    { value: 'ひつじのフェルメー', aliases: ['ひつじのフェルメー','ひつじ','フェルメー','フェルメール','羊のフェルメー','羊'] },
+    { value: 'CLAUDE',       aliases: ['CLAUDE','claude','クロード','くろーど'] },
+    { value: 'DULCE',        aliases: ['DULCE','dulce','ドルチェ','ドルセ','ドルス','ドゥルセ'] },
+    { value: '求人',          aliases: ['求人','きゅうじん'] },
+    { value: '１１万円',       aliases: ['１１万円','11万円','11万','じゅういちまんえん','十一万'] },
+    { value: 'プライベート',   aliases: ['プライベート','ぷらいべーと','個人','プライベイト'] },
+    { value: 'その他',        aliases: ['その他','そのた','その他'] }
+  ];
+
+  const lowerText = text.toLowerCase();
+  for (const proj of projectAliases) {
+    if (proj.aliases.some(a => text.includes(a) || lowerText.includes(a.toLowerCase()))) {
+      document.getElementById('taskProject').value = proj.value;
+      break;
+    }
+  }
+}
+
+function getDayOffset(targetDay) {
+  const today = new Date().getDay();
+  let offset = targetDay - today;
+  if (offset <= 0) offset += 7;
+  return offset;
+}
 
 // 初期ロード
 loadTasks();
